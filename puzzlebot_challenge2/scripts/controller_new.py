@@ -28,8 +28,8 @@ TargetX = 0
 TargetY = 0
 
 #Constantes del controlador
-Kv = 0.25
-Kw = 5
+Kv = 0.2
+Kw = 3
 
 #tiempos
 tiempo_inicial = 0
@@ -48,57 +48,62 @@ def controller():
     tiempo_anterior = 0
     e = 1
     while (e > 0.2 or ew > 0.1 or ew < -0.1):
-        rospy.loginfo("wr: %f",wr)
-        rospy.loginfo("wl: %f",wl)
-
-        tiempo_actual = rospy.get_time() - tiempo_inicial
-        dt = tiempo_actual - tiempo_anterior
-
-        #rospy.loginfo("DIFERENCIAL DE TIEMPO: %f", dt)
-       
-
-        if(np.abs(wr - wl) > 0.05): 
-            R = (l*((r*wr)+(r*wl)))/(2*(r*wr)-(r*wl))
-            w = ((r*wr)-(r*wl))/l
-            posicion_real_x = R*np.cos(w*dt)*np.sin(posicion_real_w) + R*np.cos(posicion_real_w)*np.sin(w*dt) + posicion_real_x - R*np.sin(posicion_real_w)
-            posicion_real_y = R*np.sin(w*dt)*np.sin(posicion_real_w) - R*np.cos(posicion_real_w)*np.sin(w*dt) + posicion_real_y + R*np.cos(posicion_real_w)
-            posicion_real_w = posicion_real_w + w*dt
+        if((abs(posicion_real_x - TargetX) < 0.05) and (abs(posicion_real_y - TargetY) < 0.05)):
+            break
         else:
-            posicion_real_x = posicion_real_x + wl*r*dt*np.cos(posicion_real_w)
-            posicion_real_y = posicion_real_y + wl*r*dt*np.sin(posicion_real_w)
-            posicion_real_w = posicion_real_w
-            
+            rospy.loginfo("wr: %f",wr)
+            rospy.loginfo("wl: %f",wl)
 
-        rospy.loginfo("posicion X: %f", posicion_real_x)
-        rospy.loginfo("target X: %f", TargetX)
+            tiempo_actual = rospy.get_time() - tiempo_inicial
+            dt = tiempo_actual - tiempo_anterior
 
-        rospy.loginfo("posicion Y: %f", posicion_real_y)
-        rospy.loginfo("target Y: %f", TargetY)
+            #rospy.loginfo("DIFERENCIAL DE TIEMPO: %f", dt)
+        
 
-        tiempo_anterior = tiempo_actual
+            if(np.abs(wr - wl) > 0.05): 
+                R = (l*((r*wr)+(r*wl)))/(2*((r*wl)-(r*wr)))
+                w = ((r*wl)-(r*wr))/l
+                posicion_real_x = R*np.cos(w*dt)*np.sin(posicion_real_w) + R*np.cos(posicion_real_w)*np.sin(w*dt) + posicion_real_x - R*np.sin(posicion_real_w)
+                posicion_real_y = R*np.sin(w*dt)*np.sin(posicion_real_w) - R*np.cos(posicion_real_w)*np.cos(w*dt) + posicion_real_y + R*np.cos(posicion_real_w)
+                posicion_real_w = posicion_real_w + w*dt
+            else:
+                posicion_real_x = posicion_real_x + wl*r*dt*np.cos(posicion_real_w)
+                posicion_real_y = posicion_real_y + wl*r*dt*np.sin(posicion_real_w)
+                
+            rospy.loginfo("posicion X: %f", posicion_real_x)
+            rospy.loginfo("target X: %f", TargetX)
 
-        x = (TargetX - posicion_real_x) ** 2
-        y = (TargetY - posicion_real_y) ** 2
-        e = np.sqrt(x + y)
-        rospy.loginfo("Error d: %f", e)
+            rospy.loginfo("posicion Y: %f", posicion_real_y)
+            rospy.loginfo("target Y: %f", TargetY)
 
-        y = TargetY - posicion_real_y
-        x = TargetX - posicion_real_x
-        ew = np.arctan2(y, x) - posicion_real_w
-        rospy.loginfo("Error w: %f", ew)
+            rospy.loginfo("posicion W: %f", posicion_real_w)
 
-        msg.linear.x = Kv * e
-        msg.angular.z = Kw * ew
+            tiempo_anterior = tiempo_actual
 
-        if(Kv*e >=13):
-            msg.linear.x=13
+            x1 = (TargetX - posicion_real_x) ** 2
+            y1 = (TargetY - posicion_real_y) ** 2
+            e = np.sqrt(x1 + y1)
+            rospy.loginfo("Error d: %f", e)
 
-        if(Kw*ew >= 13):
-            msg.angular.z = 13
-        elif(Kw*ew <= -13):
-            msg.angular.z = -13
+            y2 = TargetY - posicion_real_y
+            x2 = TargetX - posicion_real_x
+            ew = np.arctan2(y2, x2) - posicion_real_w
+            rospy.loginfo("Error w: %f", ew)
 
-        cmd_vel.publish(msg)
+            msg.linear.x = Kv * e
+            msg.angular.z = Kw * ew
+
+            if(Kv*e >=13):
+                msg.linear.x = 13
+            elif(Kv*e <= -13):
+                msg.linear.x = -13
+
+            if(Kw*ew >= 13):
+                msg.angular.z = 13
+            elif(Kw*ew <= -13):
+                msg.angular.z = -13
+
+            cmd_vel.publish(msg)
 
     msg.linear.x = 0
     msg.angular.z = 0
@@ -107,11 +112,11 @@ def controller():
     
 def callback2(msg):
     global wr
-    wr = -1* msg.data
+    wr = -1*msg.data
 
 def callback(msg):
     global wl
-    wl =-1 * msg.data
+    wl = -1*msg.data
 
 if __name__ == '__main__':
     #global cmd_vel, TargetX, TargetY, tiempo_inicial
@@ -147,4 +152,5 @@ if __name__ == '__main__':
         cmd_vel.publish(msg)
 
         rate.sleep()
+
 
