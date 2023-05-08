@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+    <rosparam file = "$(find puzzlebot_challenge)/config/pid_params.yaml" command = "load" />
+    <node pkg="puzzlebot_challenge" type="controller.py" name="controller" output="screen" launch-prefix="gnome-terminal --command"/>
+    <node pkg="puzzlebot_challenge" type="setPointGenerator.py" name="generator" output="screen" launch-prefix="gnome-terminal --command"/>
+</launch>
