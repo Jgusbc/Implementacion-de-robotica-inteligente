@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+    <rosparam file = "$(find puzzebot_challenge2)/config/param_file.yaml" command = "load"  />
+    <node pkg="puzzlebot_challenge2" type="path_genG.py" name="generator" output="screen" launch-prefix="gnome-terminal --command"/>
+    <node pkg="puzzlebot_challenge2" type="converter.py" name="converter" output="screen" launch-prefix="gnome-terminal --command" />
+    <node pkg="puzzlebot_challenge2" type="controllerG.py" name="controller" output="screen" launch-prefix="gnome-terminal --command" />
+    <node pkg="vision" type="image_generator.py" name="image_pub" output="screen" launch-prefix="gnome-terminal --command" />
+    <node pkg="vision" type="ros_image.py" name="image_receiver" output="screen" launch-prefix="gnome-terminal --command" />
+</launch>
