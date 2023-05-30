@@ -10,7 +10,7 @@ angular = 0
 
 r = 0.05
 l = 0.19
-vel_max = 13.65
+vel_max = 12.6
 
 def convert(vel):
     global lineal, angular
@@ -21,6 +21,7 @@ def convert(vel):
 
 
 if __name__ == '__main__':
+    global r, l, lineal, angular, vel_max
     pwmL = rospy.Publisher("cmd_pwmL", Float32, queue_size=10)
     pwmR = rospy.Publisher("cmd_pwmR", Float32, queue_size=10)
 
@@ -32,32 +33,14 @@ if __name__ == '__main__':
 
     while not rospy.is_shutdown():
 
-        wl = (lineal/r) - ((angular*l)/(2*r))
-        wr = (lineal/r) + ((angular*l)/(2*r))
+        wr = (1/(2*r))*(2*lineal + l*angular)
+        wl = (1/(2*r))*(2*lineal - l*angular)
 
-        #wr = (1/(2*r))*(2*lineal + l*angular)
-        #wl = (1/(2*r))*(2*lineal - l*angular)
+        pwm_right = wr/vel_max
+        pwm_left = wl/vel_max
 
-        if (wr >= 13):
-            wr = 13
-        elif (wr <= -13):
-            wr = -13
-
-        if (wl > 13):
-            wl = 13
-        elif (wl < -13):
-            wl = -13
-
-        pwm_right = (wr/vel_max)
-        pwm_left = (wl/vel_max)
-
-
-        #rospy.loginfo("PWM R: %f", pwm_right)
-        #rospy.loginfo("PWM L: %f", pwm_left)
-
-        rospy.loginfo("wr: %f", wr)
-        rospy.loginfo("wl: %f", wl)
-
+        rospy.loginfo("PWM R: %f", pwm_right)
+        rospy.loginfo("PWM L: %f", pwm_left)
         pwmL.publish(pwm_left)
         pwmR.publish(pwm_right)
 
