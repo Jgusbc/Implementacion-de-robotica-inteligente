@@ -27,7 +27,7 @@ class Generator:
 
 if __name__ == "__main__":
     gen = Generator()
-    rospy.init_node("generator")
+    rospy.init_node("Generator")
     x = input("X pos: ")
     y = input("Y pos: ")
     gen.generate(x,y)
