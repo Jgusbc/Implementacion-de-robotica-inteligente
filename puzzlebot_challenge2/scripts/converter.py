@@ -48,10 +48,19 @@ if __name__ == '__main__':
         elif (wl < -13):
             wl = -13
 
+
         pwm_right = (wr/vel_max)
         pwm_left = (wl/vel_max)
 
-
+        if(pwm_left > 0 and pwm_left < 0.2):
+            pwm_left = 0.2
+        elif(pwm_left < 0 and pwm_left > -0.2):
+            pwm_left = -0.2
+        if(pwm_right > 0 and pwm_right < 0.2):
+            pwm_right = 0.2
+        elif(pwm_right < 0 and pwm_right > -0.2):
+            pwm_right = -0.2
+        
         #rospy.loginfo("PWM R: %f", pwm_right)
         #rospy.loginfo("PWM L: %f", pwm_left)
 
