@@ -7,9 +7,9 @@ from xarm_msgs.srv import *
 
 fps = 10
 
-kp_linx = 0.00001
-kp_liny = 0.00001
-kp_angz = 0.001
+kp_linx = 0.0234375*2
+kp_liny = 0.03125*2
+kp_angz = 0.25
 lower = np.array([170, 120, 100], dtype=np.uint8)
 upper = np.array([179, 255, 255], dtype=np.uint8)
 lower2 = np.array([0, 120, 100], dtype=np.uint8)
@@ -21,6 +21,7 @@ xarm_move_msg.coord = 1
 def stop():
     cv2.destroyAllWindows()
     cap.release()
+    move_line([0,0,0,0,0,0], 0, 1)
 
 
 if __name__ == '__main__':
@@ -34,6 +35,7 @@ if __name__ == '__main__':
     set_state = rospy.ServiceProxy('/xarm/set_state', SetInt16)
     get_position = rospy.ServiceProxy('/xarm/get_position_rpy', GetFloat32List)
     home = rospy.ServiceProxy('/xarm/go_home', Move)
+    move_joint = rospy.ServiceProxy('/xarm/move_joint', Move)
 
     rospy.init_node("xarm_visservo")
     rate = rospy.Rate(fps)
@@ -43,17 +45,16 @@ if __name__ == '__main__':
         motion_en(8, 1)
         set_mode(0)
         set_state(0)
-        req = MoveRequest()  # MoveRequest for go_home
-        req.mvvelo = 0.7
-        req.mvacc = 3.5
-        req.mvtime = 0
-        home(req)
+        move_joint([0,-39*np.pi/180,-34*np.pi/180, 0, 74*np.pi/180,0], 0.35, 7, 0, 0)
+        rospy.wait_for_service('/xarm/move_joint')
+
 
     except rospy.ServiceException as e:
         print("Before servo_cartesian, service call failed: %s" % e)
         exit(-1)
 
     set_mode(5)
+    set_state(0)
 
     while not rospy.is_shutdown():
         ret, img = cap.read()
@@ -101,8 +102,8 @@ if __name__ == '__main__':
         error = error.sum(axis=0)
         theta_error = np.arctan2((box[2][1]-box[1][1]), (box[2][0] - box[1][0]))
         theta_error = -np.arctan2(np.sin(theta_error), np.cos(theta_error))
-        xarm_move_msg.velocities = [error[0], -error[1], 0, 0, 0, theta_error]
-        move_line(xarm_move_msg)
+        move_line([error[1]*kp_liny, -error[0]*kp_linx, 0, 0, 0, -theta_error*kp_angz], 0, 1)
+        print(error[1]*kp_liny, -error[0]*kp_linx, theta_error)
         cv2.imshow("filter", gray)
         cv2.imshow("box", rot_bbox)
         # print(box.shape)
