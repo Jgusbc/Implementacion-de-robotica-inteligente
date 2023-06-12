@@ -10,10 +10,8 @@ fps = 10
 kp_linx = 0.0234375*2
 kp_liny = 0.03125*2
 kp_angz = 0.25
-lower = np.array([170, 120, 100], dtype=np.uint8)
-upper = np.array([179, 255, 255], dtype=np.uint8)
-lower2 = np.array([0, 120, 100], dtype=np.uint8)
-upper2 = np.array([10, 255, 255], dtype=np.uint8)
+lower = np.array([100, 200, 50], dtype=np.uint8)
+upper = np.array([125, 255, 255], dtype=np.uint8)
 xarm_move_msg = MoveVelo()
 xarm_move_msg.jnt_sync = 0
 xarm_move_msg.coord = 1
@@ -26,8 +24,11 @@ def stop():
 
 if __name__ == '__main__':
     cap = cv2.VideoCapture(2)
+    rospy.init_node("xarm_visservo")
+    rospy.on_shutdown(stop)
 
     rospy.wait_for_service('/xarm/velo_move_line')
+    rospy.wait_for_service('/xarm/move_joint')
 
     move_line = rospy.ServiceProxy('/xarm/velo_move_line', MoveVelo)
     motion_en = rospy.ServiceProxy('/xarm/motion_ctrl', SetAxis)
@@ -36,18 +37,13 @@ if __name__ == '__main__':
     get_position = rospy.ServiceProxy('/xarm/get_position_rpy', GetFloat32List)
     home = rospy.ServiceProxy('/xarm/go_home', Move)
     move_joint = rospy.ServiceProxy('/xarm/move_joint', Move)
-
-    rospy.init_node("xarm_visservo")
     rate = rospy.Rate(fps)
-    rospy.on_shutdown(stop)
 
     try:
-        motion_en(8, 1)
+        motion_en(8,1)
         set_mode(0)
         set_state(0)
-        move_joint([0,-39*np.pi/180,-34*np.pi/180, 0, 74*np.pi/180,0], 0.35, 7, 0, 0)
-        rospy.wait_for_service('/xarm/move_joint')
-
+        ret = move_joint([0,-0.6806,-0.5934,0,1.2915,0],0.35,7,0,0)
 
     except rospy.ServiceException as e:
         print("Before servo_cartesian, service call failed: %s" % e)
@@ -60,10 +56,10 @@ if __name__ == '__main__':
         ret, img = cap.read()
         if not ret:
             break
+        rot_bbox = img.copy()
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        mask1 = cv2.inRange(hsv, lower, upper)
-        mask2 = cv2.inRange(hsv, lower2, upper2)
-        mask = mask1 + mask2
+        mask = cv2.inRange(hsv, lower, upper)
+        img2 = img.copy()
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img2 = cv2.bitwise_and(img, img, mask=mask)
         gray = 255-img2
@@ -83,6 +79,7 @@ if __name__ == '__main__':
         # get largest contour
         contours = cv2.findContours(rect, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         contours = contours[0] if len(contours) == 2 else contours[1]
+        big_contour = None
         for c in contours:
             area_thresh = 0
             area = cv2.contourArea(c)
@@ -91,22 +88,26 @@ if __name__ == '__main__':
                 big_contour = c
 
         # get rotated rectangle from contour
-        rot_rect = cv2.minAreaRect(big_contour)
-        box = cv2.boxPoints(rot_rect)
-        box = np.int0(box)
-        if box[0][0] > box[2][0]:
-            box = np.array([box[1], box[2], box[3], box[0]])
-        rot_bbox = img.copy()
-        cv2.drawContours(rot_bbox, [box], 0, (0, 0, 255), 2)
-        error = np.array([[320, 240],[320, 240],[320, 240],[320, 240]]) - box
-        error = error.sum(axis=0)
-        theta_error = np.arctan2((box[2][1]-box[1][1]), (box[2][0] - box[1][0]))
-        theta_error = -np.arctan2(np.sin(theta_error), np.cos(theta_error))
-        move_line([error[1]*kp_liny, -error[0]*kp_linx, 0, 0, 0, -theta_error*kp_angz], 0, 1)
-        print(error[1]*kp_liny, -error[0]*kp_linx, theta_error)
+        if big_contour is not None:
+            rot_rect = cv2.minAreaRect(big_contour)
+            box = cv2.boxPoints(rot_rect)
+            box = np.int0(box)
+            if box[0][0] > box[2][0]:
+                box = np.array([box[1], box[2], box[3], box[0]])
+            cv2.drawContours(rot_bbox, [box], 0, (0, 0, 255), 2)
+            error = np.array([[320, 240],[320, 240],[320, 240],[320, 240]]) - box
+            error = error.sum(axis=0)
+            theta_error = np.arctan2((box[2][1]-box[1][1]), (box[2][0] - box[1][0]))
+            theta_error = -np.arctan2(np.sin(theta_error), np.cos(theta_error))
+            z_error = 30*np.log(10000/cv2.contourArea(big_contour))
+            move_line([error[1]*kp_liny, -error[0]*kp_linx, z_error, 0, 0, -theta_error*kp_angz], 0, 1)
+        else:
+            print("no u")
+            move_line([0, 0, 0, 0, 0, 0], 0, 1)
         cv2.imshow("filter", gray)
         cv2.imshow("box", rot_bbox)
         # print(box.shape)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             cap.release()
         rate.sleep()
+
