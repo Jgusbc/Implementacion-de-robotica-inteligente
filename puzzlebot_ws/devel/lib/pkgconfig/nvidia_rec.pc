@@ -1,0 +1,8 @@
+prefix=/home/puzzlebot/puzzlebot_ws/devel
+
+Name: nvidia_rec
+Description: Description of nvidia_rec
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

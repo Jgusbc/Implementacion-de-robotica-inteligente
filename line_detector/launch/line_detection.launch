@@ -1,6 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-    <node pkg="line_detector" type="line_segmentation.py" name="line" output="screen" launch-prefix="gnome-terminal --command"/>
-    <node pkg="line_detector" type="converter.py" name="converter" output="screen" launch-prefix="gnome-terminal --command" />
-    <node pkg="line_detector" type="Controller.py" name="Controller" output="screen" launch-prefix="gnome-terminal --command" />
-</launch>

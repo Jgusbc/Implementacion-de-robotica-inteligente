@@ -1,0 +1,2 @@
+megatron:puzzlebot_autostart:yolo_rec
+-DCATKIN_DEVEL_PREFIX=/home/puzzlebot/puzzlebot_ws/devel -DCMAKE_INSTALL_PREFIX=/home/puzzlebot/puzzlebot_ws/install -G Unix Makefiles

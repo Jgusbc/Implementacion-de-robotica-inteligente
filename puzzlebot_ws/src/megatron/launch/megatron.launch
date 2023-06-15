@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+    <node pkg="megatron" type="image_generator.py" name="image_generator" />
+    <node pkg="megatron" type="line_detector.py" name="line_detector"  />
+    <node pkg="megatron" type="traffic_lights.py" name="traffic_lights"  />
+    <node pkg="megatron" type="instructions.py" name="instructions" />
+    <node pkg="megatron" type="controller.py" name="controller"  />
+</launch>

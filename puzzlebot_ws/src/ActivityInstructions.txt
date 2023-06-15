@@ -1,0 +1,15 @@
+Activity script
+
+In this activity the objective is to get familiar with the yoloV5 repo from ultralitics. Firstly have a look at the tutorials linked in the power points, then
+once you are familiar with them you can test the off the shelf script via:
+
+	To run a detection from the command line
+	cd /yolov5
+	python3 detect.py --weights best.engine --data 'data/tf.yaml' --source /home/puzzlebot/yolov5/samples/data/test/images --name /home/puzzlebot/yolov5/samples/data/test/class1 --device 0
+
+Once you are familiar with this you'll find an example ("standalone_yolo.py") of a scrypt making the inference over a set of data. Using ROS,
+embed that example into a ros node.
+
+	cd
+	home/puzzlebot/catkin_ws/src/yolo_rec/src
+	python3 standalone_yolo.py
