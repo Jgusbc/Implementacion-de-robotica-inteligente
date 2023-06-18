@@ -5,17 +5,20 @@ import numpy as np
 import cv2
 from xarm_msgs.srv import *
 
+# set fps
 fps = 10
 
+# set controller constants
 kp_linx = 0.0234375*2
 kp_liny = 0.03125*2
 kp_angz = 0.25
+
+# set hsv mask lower and upper bounds
 lower = np.array([100, 200, 50], dtype=np.uint8)
 upper = np.array([125, 255, 255], dtype=np.uint8)
-xarm_move_msg = MoveVelo()
-xarm_move_msg.jnt_sync = 0
-xarm_move_msg.coord = 1
 
+
+# set stop sequence to halt the robot
 def stop():
     cv2.destroyAllWindows()
     cap.release()
@@ -23,13 +26,16 @@ def stop():
 
 
 if __name__ == '__main__':
+    # init camera and node
     cap = cv2.VideoCapture(2)
     rospy.init_node("xarm_visservo")
     rospy.on_shutdown(stop)
 
+    # wait for service
     rospy.wait_for_service('/xarm/velo_move_line')
     rospy.wait_for_service('/xarm/move_joint')
 
+    # get xArm service proxies
     move_line = rospy.ServiceProxy('/xarm/velo_move_line', MoveVelo)
     motion_en = rospy.ServiceProxy('/xarm/motion_ctrl', SetAxis)
     set_mode = rospy.ServiceProxy('/xarm/set_mode', SetInt16)
@@ -39,6 +45,7 @@ if __name__ == '__main__':
     move_joint = rospy.ServiceProxy('/xarm/move_joint', Move)
     rate = rospy.Rate(fps)
 
+    # set robot to starting configuration
     try:
         motion_en(8,1)
         set_mode(0)
@@ -49,19 +56,26 @@ if __name__ == '__main__':
         print("Before servo_cartesian, service call failed: %s" % e)
         exit(-1)
 
+    # set robot to move using cartesian velocities
     set_mode(5)
     set_state(0)
 
+    # main loop
     while not rospy.is_shutdown():
+        # read image
         ret, img = cap.read()
         if not ret:
             break
         rot_bbox = img.copy()
+        
+        # get color mask to only track the color blue
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         mask = cv2.inRange(hsv, lower, upper)
         img2 = img.copy()
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img2 = cv2.bitwise_and(img, img, mask=mask)
+        
+        # get a threshold to only get high blue values
         gray = 255-img2
         blur = cv2.GaussianBlur(gray, (3, 3), 0)
         thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 75, 2)
@@ -95,6 +109,8 @@ if __name__ == '__main__':
             if box[0][0] > box[2][0]:
                 box = np.array([box[1], box[2], box[3], box[0]])
             cv2.drawContours(rot_bbox, [box], 0, (0, 0, 255), 2)
+
+            # calculate errors and move xArm
             error = np.array([[320, 240],[320, 240],[320, 240],[320, 240]]) - box
             error = error.sum(axis=0)
             theta_error = np.arctan2((box[2][1]-box[1][1]), (box[2][0] - box[1][0]))
@@ -104,6 +120,8 @@ if __name__ == '__main__':
         else:
             print("no u")
             move_line([0, 0, 0, 0, 0, 0], 0, 1)
+        
+        # show image on computer
         cv2.imshow("filter", gray)
         cv2.imshow("box", rot_bbox)
         # print(box.shape)
